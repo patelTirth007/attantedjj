@@ -1,0 +1,39 @@
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Instrument Serif", serif;
+  
+  --color-brand-bg: #FBFBF9;
+  --color-brand-text: #1A1A1A;
+  --color-brand-accent: #E67E22;
+  --color-brand-muted: #F0EEEA;
+  --color-brand: #1A1A1A;
+}
+
+@layer base {
+  body {
+    @apply bg-brand-bg text-brand-text antialiased;
+  }
+}
+
+.art-card {
+  @apply bg-brand-muted border border-brand p-6;
+}
+
+.art-label {
+  @apply text-[10px] uppercase tracking-[0.2em] font-bold opacity-50 mb-1 block;
+}
+
+.art-heading {
+  @apply font-serif italic leading-none;
+}
+
+.art-button-primary {
+  @apply px-4 py-3 border border-brand bg-brand-text text-white text-[10px] uppercase tracking-widest font-bold hover:opacity-90 transition-all active:scale-95;
+}
+
+.art-button-secondary {
+  @apply px-4 py-3 border border-brand text-brand-text text-[10px] uppercase tracking-widest font-bold hover:bg-brand-text hover:text-white transition-all active:scale-95;
+}

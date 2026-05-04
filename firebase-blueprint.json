@@ -1,0 +1,76 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "Represents a user in the system (Student, Faculty, or Admin).",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth unique ID" },
+        "email": { "type": "string", "format": "email" },
+        "name": { "type": "string" },
+        "role": { "type": "string", "enum": ["student", "faculty", "admin"] },
+        "studentId": { "type": "string", "description": "Institutional ID number" },
+        "createdAt": { "type": "object", "description": "Server timestamp" }
+      },
+      "required": ["uid", "email", "name", "role", "createdAt"]
+    },
+    "Course": {
+      "title": "Course",
+      "description": "Represents an academic course/subject.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "code": { "type": "string" },
+        "facultyId": { "type": "string", "description": "UID of the assigned faculty member" },
+        "createdAt": { "type": "object" }
+      },
+      "required": ["id", "name", "code", "facultyId", "createdAt"]
+    },
+    "Session": {
+      "title": "Attendance Session",
+      "description": "A live broadcast for attendance marking.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "courseId": { "type": "string" },
+        "facultyId": { "type": "string" },
+        "startTime": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["active", "ended"] }
+      },
+      "required": ["id", "courseId", "facultyId", "startTime", "status"]
+    },
+    "Attendance": {
+      "title": "Attendance Record",
+      "description": "A verified record of a student attending a session.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "sessionId": { "type": "string" },
+        "studentId": { "type": "string" },
+        "courseId": { "type": "string" },
+        "facultyId": { "type": "string" },
+        "timestamp": { "type": "integer" }
+      },
+      "required": ["id", "sessionId", "studentId", "courseId", "facultyId", "timestamp"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "User",
+      "description": "Main user registry."
+    },
+    "courses/{courseId}": {
+      "schema": "Course",
+      "description": "Curriculum registry."
+    },
+    "sessions/{sessionId}": {
+      "schema": "Session",
+      "description": "Brodcast sessions."
+    },
+    "attendance/{attendanceId}": {
+      "schema": "Attendance",
+      "description": "Temporal logs of student handshakes."
+    }
+  }
+}

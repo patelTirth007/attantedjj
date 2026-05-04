@@ -1,0 +1,14 @@
+{
+  "name": "EduAttend",
+  "description": "A comprehensive, modular Student Attendance System with Admin, Faculty, and Student portals featuring dynamic QR tracking and real-time analytics.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "Firebase Authentication",
+    "Firestore database",
+    "QR Code Generation/Scanning",
+    "Face Verification"
+  ]
+}

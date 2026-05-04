@@ -1,0 +1,127 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // 0. Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helper Primitives ---
+    
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isEmailVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Super Admin from Metadata
+    function isSuperAdmin() {
+      return isSignedIn() && request.auth.token.email == 'tirthpatel1112005@gmail.com' && isEmailVerified();
+    }
+
+    // Role-based lookup (Avoid recursion during user creation)
+    function hasRole(role) {
+      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
+    }
+
+    // --- Collections ---
+
+    // 1. Users Collection
+    match /users/{userId} {
+      function isValidUser(data) {
+        return data.keys().hasAll(['uid', 'email', 'name', 'role', 'createdAt']) &&
+               data.keys().size() == 5 &&
+               data.uid == request.auth.uid &&
+               data.email is string && data.email.size() <= 256 &&
+               data.name is string && data.name.size() <= 128 &&
+               data.role in ['student', 'faculty', 'admin'] &&
+               data.createdAt == request.time;
+      }
+
+      // Read: Users can read their own data, Admins can read all.
+      // List: Admins can list all.
+      allow get: if isSignedIn() && (request.auth.uid == userId || hasRole('admin'));
+      allow list: if isSignedIn() && (hasRole('admin') || (resource.data.uid == request.auth.uid));
+
+      allow create: if isSignedIn() && isValidId(userId) && userId == request.auth.uid && isValidUser(incoming()) && 
+                    (incoming().role != 'admin' || isSuperAdmin());
+      
+      allow update: if isSignedIn() && request.auth.uid == userId && 
+                    incoming().diff(existing()).affectedKeys().hasOnly(['name', 'studentId']) &&
+                    incoming().role == existing().role; // Role is immutable
+    }
+
+    // 2. Courses Collection
+    match /courses/{courseId} {
+      function isValidCourse(data) {
+        return data.keys().hasAll(['id', 'name', 'code', 'facultyId', 'createdAt']) &&
+               data.id == courseId &&
+               data.name is string && data.name.size() <= 100 &&
+               data.code is string && data.code.size() <= 20 &&
+               data.facultyId is string &&
+               data.createdAt == request.time;
+      }
+
+      allow read: if isSignedIn();
+      allow create: if (hasRole('admin') || isSuperAdmin()) && isValidId(courseId) && isValidCourse(incoming());
+      allow delete: if hasRole('admin') || isSuperAdmin();
+    }
+
+    // 3. Sessions Collection
+    match /sessions/{sessionId} {
+      function isValidSession(data) {
+        return data.keys().hasAll(['id', 'courseId', 'facultyId', 'startTime', 'status']) &&
+               data.id == sessionId &&
+               data.courseId is string &&
+               data.facultyId == request.auth.uid &&
+               data.status in ['active', 'ended'];
+      }
+
+      allow read: if isSignedIn();
+      allow create: if (hasRole('faculty') || hasRole('admin')) && isValidId(sessionId) && isValidSession(incoming());
+      
+      allow update: if isSignedIn() && (
+        // Action: End Session
+        (existing().facultyId == request.auth.uid && 
+         incoming().diff(existing()).affectedKeys().hasOnly(['status']) &&
+         existing().status == 'active' && 
+         incoming().status == 'ended')
+      );
+    }
+
+    // 4. Attendance Collection
+    match /attendance/{atId} {
+      function isValidAttendance(data) {
+        return data.keys().hasAll(['id', 'sessionId', 'studentId', 'courseId', 'facultyId', 'timestamp']) &&
+               data.studentId == request.auth.uid &&
+               data.id == atId &&
+               data.sessionId is string &&
+               data.courseId is string &&
+               data.facultyId is string;
+      }
+
+      // Security List Query: Enforce that students only list their own.
+      allow list: if isSignedIn() && (resource.data.studentId == request.auth.uid || hasRole('faculty') || hasRole('admin'));
+      allow get: if isSignedIn() && (resource.data.studentId == request.auth.uid || hasRole('faculty') || hasRole('admin'));
+
+      allow create: if isSignedIn() && isValidId(atId) && isValidAttendance(incoming()) &&
+                    // Verify session is active
+                    get(/databases/$(database)/documents/sessions/$(incoming().sessionId)).data.status == 'active';
+    }
+  }
+}
